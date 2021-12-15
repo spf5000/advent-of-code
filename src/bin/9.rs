@@ -1,81 +1,89 @@
 use advent_of_code::parse_data_file;
 
-const DAYS: u16 = 256;
+use std::collections::HashSet;
+use std::ops::Range;
+
+const MAX_VAL: u32 = 10;
+fn parse_input() -> anyhow::Result<Vec<Vec<u32>>> {
+    let input_string = parse_data_file("9.txt")?;
+    let mut output = Vec::new();
+    for line in input_string.lines() {
+        let mut line_nums = Vec::new();
+        for c in line.chars() {
+            line_nums.push(c.to_digit(10).expect(format!("Character is not a digit! {}", c).as_str()));
+        }
+        output.push(line_nums);
+    }
+    Ok(output)
+}
 
 fn main() -> anyhow::Result<()> {
-    // let input_string = parse_data_file("test.txt")?;
-    let input_string = parse_data_file("9.txt")?;
-    let mut output = 0;
-    let mut output_2: Vec<u128> = Vec::new();
-    for line in input_string.lines() {
-        let mut stack = Vec::new();
-        let mut incomplete = true;
-        for c in line.chars() {
-            match c {
-                '[' | '(' | '<' | '{' => stack.push(c),
-                ')' => {
-                    if !is_closed('(', stack.pop()) {
-                        output += 3;
-                        incomplete = false;
-                        break;
-                    }
-                }
-                ']' => {
-                    if !is_closed('[', stack.pop()) {
-                        output += 57;
-                        incomplete = false;
-                        break;
-                    }
-                }
-                '}' => {
-                    if !is_closed('{', stack.pop()) {
-                        output += 1197;
-                        incomplete = false;
-                        break;
-                    }
-                }
-                '>' => {
-                    if !is_closed('<', stack.pop()) {
-                        output += 25137;
-                        incomplete = false;
-                        break;
-                    }
-                }
-                _ => panic!("Unexpected input character: {}", c),
-            };
-        }
+    let grid = parse_input()?;
 
-        if !incomplete {
-            println!("Invalid line: {}", line);
-            continue;
-        }
+    let mut answer = 0;
+    let mut visited = HashSet::new();
+    let mut basins = Vec::new();
+    for i in 0..grid.len() {
+        let row = &grid[i];
+        for j in 0..row.len() {
+            // puzzle 1
+            answer += calc_lowpoint_values(i, j, &grid);
 
-        // remaining characters in the stack are characters to complete the stack.
-        let mut incomplete_output = 0;
-        while let Some(open) = stack.pop() {
-            incomplete_output *= 5;
-            incomplete_output += match open {
-                '(' => 1,
-                '[' => 2,
-                '{' => 3,
-                '<' => 4,
-                _ => panic!("Unexpected open character: {}", open),
-            };
+            // puzzle 2
+            if !visited.contains(&(i, j)) {
+                basins.push(get_basin(i, j, &grid, &mut visited));
+            }
         }
-        output_2.push(incomplete_output);
     }
+    println!("The answer to puzzle 1 is {}", answer);
 
-    println!("The First Answer is {}", output);
-
-    output_2.sort();
-    println!("The Second Answer is {}", output_2[output_2.len() / 2]);
-
+    basins.sort();
+    let mut answer_2 = 1;
+    for _ in 0..3 {
+        answer_2 *= basins.pop().expect("Expect to find at least three basins!");
+    }
+    println!("The answer to puzzle 2 is {}", answer_2);
     Ok(())
 }
 
-fn is_closed(open_needed: char, previous_open: Option<char>) -> bool {
-    match previous_open {
-        Some(previous) => open_needed == previous,
-        None => false,
+fn get_basin(i: usize, j: usize, grid: &Vec<Vec<u32>>, visited: &mut HashSet<(usize, usize)>) -> u32 {
+    let mut stack = Vec::new();
+    let mut output = 0;
+    stack.push((i, j));
+    while let Some((a, b)) = stack.pop() {
+        if !visited.contains(&(a, b)) {
+            visited.insert((a, b));
+            if get_grid_value(a, b, grid) < 9 {
+                output += 1;
+                if a != 0 { stack.push((a - 1, b)) };
+                if b != 0 { stack.push((a, b - 1)) };
+                stack.push((a + 1, b));
+                stack.push((a, b + 1));
+            }
+        }
+    }
+    output
+}
+
+fn calc_lowpoint_values(i: usize, j: usize, grid: &Vec<Vec<u32>>) -> u32 {
+    let val = get_grid_value(i, j, &grid);
+    let up = if i == 0 { 10 } else { get_grid_value(i - 1, j, &grid) };
+    let down = get_grid_value(i + 1, j, &grid);
+    let left = if j == 0 { 10 } else { get_grid_value(i, j - 1, &grid) };
+    let right = get_grid_value(i, j + 1, &grid);
+
+    // low point
+    if val < up && val < down && val < left && val < right {
+        val + 1
+    } else {
+        0
+    }
+}
+
+fn get_grid_value(i: usize, j: usize, grid: &Vec<Vec<u32>>) -> u32 {
+    if i >= grid.len() || ( i < grid.len() && j >= grid[i].len() ) {
+        MAX_VAL
+    } else {
+        grid[i][j]
     }
 }
