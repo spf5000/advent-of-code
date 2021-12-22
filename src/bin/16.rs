@@ -24,7 +24,6 @@ fn main() -> anyhow::Result<()> {
     let input = parse_input()?;
 
     let mut remaining = 8;
-    let mut answer = 0;
     let mut i = 0;
 
     let (packet, _) = parse_packet(&mut i, &mut remaining, &input)?;
