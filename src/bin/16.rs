@@ -1,180 +1,252 @@
-
 use advent_of_code::parse_data_file;
 use anyhow::anyhow;
+use std::iter::Extend;
+
+const TYPE_MASK: u32 = 7; // 7 = 00000111
+const LITERAL_GROUP_PREFIX_MASK: u32 = 16; // 7 = 10000
+const LITERAL_GROUP_SUFFIX_MASK: u32 = 15; // 7 = 1111
+const HEADER_LEN: u8 = 6;
 
 fn parse_input() -> anyhow::Result<Vec<u8>> {
-    let input_string = parse_data_file("test.txt")?;
-    // let input_string = parse_data_file("16.txt")?;
-
-
+    // let input_string = parse_data_file("test.txt")?;
+    let input_string = parse_data_file("16.txt")?;
 
     Ok((0..input_string.trim().len())
         .step_by(2)
-        .map(|i| u8::from_str_radix(&input_string[i..=i+1], 16).expect("Expected input to include hex string!"))
+        .map(|i| {
+            u8::from_str_radix(&input_string[i..=i + 1], 16)
+                .expect("Expected input to include hex string!")
+        })
         .collect())
-             
 }
 
 fn main() -> anyhow::Result<()> {
     let input = parse_input()?;
 
-    let mut input_iter = input.into_iter();
     let mut remaining = 8;
-    let mut current = input_iter.next();
     let mut answer = 0;
-    loop {
-        if current.is_none() {
-            break;
-        }
-        let mut current_val = current.unwrap();
+    let mut i = 0;
 
-        let version_pull = pull_bits(3, remaining, current_val, &mut input_iter)?;
-        answer += version_pull.value as u32;
-        let id_pull = pull_bits(3, version_pull.new_remaining, version_pull.current.expect("Expect ID"), &mut input_iter)?;
-        let id = id_pull.value;
-        current_val = id_pull.current.unwrap();
-        remaining = id_pull.new_remaining;
-        println!("Version: {}, ID: {}", version_pull.value, &id);
-        if version_pull.value == 0 && id == 0 {
-            break;
-        }
-        match id {
-            // literal number
-            4 => {
-                let (val, pull, _) = pull_literal_number(remaining, current_val, &mut input_iter)?;
-                current = pull.current;
-                remaining = pull.new_remaining;
-                // TODO: DO something with val
-            }
-            // Operator
-            _ => {
-                println!("TEST");
-                let type_pull = pull_bits(1, remaining, current_val, &mut input_iter)?;
-                let length_bits = if type_pull.value == 1 { 11 } else if type_pull.value == 0 { 15 } else { panic!("WFT!") };
-                current_val = type_pull.current.expect("Expect there to be a current value after operator type pull!");
-                let mut pull = pull_bits(length_bits, type_pull.new_remaining, current_val, &mut input_iter)?;
-                let (mut packets_remaining, mut literal_bits) = if type_pull.value == 1 {
-                    (pull.value, 0)
-                } else {
-                    (0, pull.value)
-                };
-                while packets_remaining > 0 || literal_bits > 0 {
-                    println!("Packets: {}, bits: {}", packets_remaining, literal_bits);
-                    println!("Literal Pull: {:?}", pull);
-                    current_val = pull.current.expect("Expect there to be a current value after operator length pull!");
+    let (packet, _) = parse_packet(&mut i, &mut remaining, &input)?;
 
-                    // TODO I should really re-use this from above
-                    let version_pull = pull_bits(3, pull.new_remaining, current_val, &mut input_iter)?;
-                    answer += version_pull.value as u32;
-                    let id_pull = pull_bits(3, version_pull.new_remaining, version_pull.current.expect("Expect ID"), &mut input_iter)?;
-                    if id_pull.value != 4 { println!("Expecting literal packet headers!"); }
-                    current_val = id_pull.current.expect("Expect there to be a current value after operator length pull!");
-
-                    let (_val, literals_pull, bits_pulled) = pull_literal_number(id_pull.new_remaining, current_val, &mut input_iter)?;
-                    pull = literals_pull;
-                    if literal_bits > 0 { literal_bits -= bits_pulled }
-                    if packets_remaining > 0 { packets_remaining -= 1 }
-                }
-
-                current = pull.current;
-                remaining = pull.new_remaining;
-            }
-        }
-    }
-
-    println!("The answer is {}", answer);
+    println!("The answer to puzzle 1 is {}", count_versions(&packet));
+    println!("The answer to puzzle 2 is {}", perform_operations(&packet));
     Ok(())
 }
 
-fn pull_literal_number<T>(remaining: u32, current: u8, iter: &mut T) -> anyhow::Result<(u32, Pull, u32)> 
-where
-    T: Iterator<Item = u8>
-{
-    let mut val = 0;
-    let mut bits_pulled = 0;
-    let mut last_pull = None;
-    let mut inner_current = current;
-    let mut inner_remaining = remaining;
-    loop {
-        bits_pulled += 5;
-        // std::thread::sleep(std::time::Duration::from_millis(1000));
-        let header_pull = pull_bits(1, inner_remaining, inner_current, iter)?;
-        let val_pull = pull_bits(4, header_pull.new_remaining, header_pull.current.unwrap(), iter)?;
-        val += val_pull.value;
-        inner_current = val_pull.current.unwrap();
-        inner_remaining = val_pull.new_remaining;
-        if header_pull.value == 0 { 
-            last_pull = Some(val_pull);
-            break; 
-        }
+fn count_versions(packet: &Packet) -> u32 {
+    match &packet.value {
+        PacketValue::Literal(_) => packet.version as u32,
+        PacketValue::Operator(subpackets) => subpackets
+            .iter()
+            .fold(packet.version as u32, |acc, subpacket| {
+                count_versions(subpacket) + acc
+            }),
     }
-    println!("Returning literal: {}", val);
-    last_pull.ok_or(anyhow!("Failed to assign last pull!")).map(|pull| (val, pull, bits_pulled))
+}
+
+fn perform_operations(packet: &Packet) -> u128 {
+    match &packet.value {
+        PacketValue::Literal(value) => *value as u128,
+        PacketValue::Operator(subpackets) => match packet.type_id {
+            // Sum
+            0 => subpackets
+                .iter()
+                .fold(0, |acc, subpacket| acc + perform_operations(subpacket)),
+            // Product
+            1 => subpackets
+                .iter()
+                .fold(1, |acc, subpacket| acc * perform_operations(subpacket)),
+            // Min
+            2 => subpackets.iter().fold(u128::MAX, |acc, subpacket| {
+                let subpacket_val = perform_operations(subpacket);
+                if acc < subpacket_val {
+                    acc
+                } else {
+                    subpacket_val
+                }
+            }),
+            // Max
+            3 => subpackets.iter().fold(u128::MIN, |acc, subpacket| {
+                let subpacket_val = perform_operations(subpacket);
+                if acc > subpacket_val {
+                    acc
+                } else {
+                    subpacket_val
+                }
+            }),
+            // Greater than
+            5 => {
+                let first = perform_operations(&subpackets[0]);
+                let last = perform_operations(&subpackets[1]);
+                if first > last {
+                    1
+                } else {
+                    0
+                }
+            },
+            // Less than
+            6 => {
+                let first = perform_operations(&subpackets[0]);
+                let last = perform_operations(&subpackets[1]);
+                if first < last {
+                    1
+                } else {
+                    0
+                }
+            },
+            // Equals
+            7 => {
+                let first = perform_operations(&subpackets[0]);
+                let last = perform_operations(&subpackets[1]);
+                if first == last {
+                    1
+                } else {
+                    0
+                }
+            }
+            _ => panic!("Unexpected packet type id!: {}", packet.type_id),
+        },
+    }
 }
 
 #[derive(Debug)]
-struct Pull {
-    current: Option<u8>,
-    new_remaining: u32,
-    value: u32
+enum PacketValue {
+    Literal(u32),
+    Operator(Vec<Packet>),
 }
 
-fn pull_bits<T>(mut bits_to_pull: u32, remaining: u32, mut current: u8, iter: &mut T) -> anyhow::Result<Pull> 
-where
-    T: Iterator<Item = u8>
-{
-    std::thread::sleep(std::time::Duration::from_millis(1000));
-    println!("Current: {:b}, remaining: {}, bits to pull: {}", current, remaining, bits_to_pull);
-    let mut output = 0;
-    if remaining > 0 {
-        if bits_to_pull <= remaining {
-            let (new_current, val) = rotate_left(current, bits_to_pull);
-            output += val as u32;
-            return Ok(Pull {
-                current: Some(new_current),
-                value: output,
-                new_remaining: remaining - bits_to_pull
-            });
-        } else {
-            let (_, val) = rotate_left(current, remaining);
-            output += val as u32;
-            current = iter.next().ok_or(anyhow!("Failed to rollover remaining!"))?;
-            println!("Temp: {:b}", current);
-            bits_to_pull -= remaining;
+#[derive(Debug)]
+struct Packet {
+    version: u8,
+    type_id: u8,
+    value: PacketValue,
+}
+
+fn parse_packet(
+    i: &mut usize,
+    remaining: &mut u8,
+    bytes: &Vec<u8>,
+) -> anyhow::Result<(Packet, u32)> {
+    let (version, type_id) = read_header(i, remaining, bytes)?;
+    match type_id {
+        4 => {
+            let (value, bits) = pull_literal_number(i, remaining, bytes)?;
+            let packet = Packet {
+                version,
+                type_id,
+                value: PacketValue::Literal(value),
+            };
+            Ok((packet, (bits + HEADER_LEN) as u32))
+        }
+        // Operators
+        _ => {
+            let mut bits_used = HEADER_LEN as u32;
+            let length_type_id = pull_bits(1, i, remaining, bytes)?;
+            let (mut packets_remaining, mut bits_remaining) = if length_type_id == 0 {
+                bits_used += 16;
+                (0, pull_bits(15, i, remaining, bytes)?)
+            } else if length_type_id == 1 {
+                bits_used += 12;
+                (pull_bits(11, i, remaining, bytes)?, 0)
+            } else {
+                return Err(anyhow!("Operator bit should be 0 or 1! {}", length_type_id));
+            };
+
+            let mut value = Vec::new();
+            while packets_remaining > 0 || bits_remaining > 0 {
+                let (subpacket, bits) = parse_packet(i, remaining, bytes)?;
+                value.push(subpacket);
+                bits_used += bits as u32;
+                if packets_remaining > 0 {
+                    packets_remaining -= 1
+                }
+                if bits_remaining > 0 {
+                    bits_remaining -= bits as u32
+                }
+            }
+            let packet = Packet {
+                version,
+                type_id,
+                value: PacketValue::Operator(value),
+            };
+            Ok((packet, bits_used))
+        }
+    }
+}
+
+fn read_header(i: &mut usize, remaining: &mut u8, bytes: &Vec<u8>) -> anyhow::Result<(u8, u8)> {
+    let header = pull_bits(6, i, remaining, bytes)?;
+    let type_id = (header & TYPE_MASK) as u8;
+    let version = (header >> 3) as u8;
+    Ok((version, type_id))
+}
+
+fn pull_literal_number(
+    i: &mut usize,
+    remaining: &mut u8,
+    bytes: &Vec<u8>,
+) -> anyhow::Result<(u32, u8)> {
+    let mut output_val = 0;
+    let mut used_bits = 0;
+    loop {
+        output_val <<= 4;
+        used_bits += 5;
+        let chunk = pull_bits(5, i, remaining, bytes)?;
+        let value = chunk & LITERAL_GROUP_SUFFIX_MASK;
+        output_val += value;
+        if chunk & LITERAL_GROUP_PREFIX_MASK == 0 {
+            break;
         }
     }
 
-    while bits_to_pull >= 8 {
-        output <<= 8;
-        output += current as u32; 
-        current = iter.next().ok_or(anyhow!("Failed to rollover current!"))?;
-        println!("Temp2: {:b}", current);
-        bits_to_pull -= 8;
-    }
-
-    output <<= bits_to_pull;
-    let (new_current, val) = rotate_left(current, bits_to_pull);
-    output += val as u32;
-
-    Ok(Pull {
-        current: Some(new_current), 
-        new_remaining: 8 - bits_to_pull,
-        value: output
-    })
+    Ok((output_val, used_bits))
 }
 
-fn rotate_left(mut current: u8, bits: u32) -> (u8, u8) {
-    let mut mask = 0;
-        0;
-    for _ in 0..bits {
-        mask <<= 1;
-        mask += 1;
-    }
-    mask <<= 8 - bits;
-    
-    let mut val = current & mask;
-    val >>= 8 - bits;
-    current <<= bits;
+fn pull_bits(
+    mut bits_to_pull: u8,
+    i: &mut usize,
+    remaining: &mut u8,
+    bytes: &Vec<u8>,
+) -> anyhow::Result<u32> {
+    let mut output = 0;
+    if bits_to_pull > *remaining {
+        // pull the remaining bits for the current index in the bytes
+        let remaining_mask = create_mask(8 - *remaining, 8);
+        output += (bytes[*i] & remaining_mask) as u32;
+        bits_to_pull -= *remaining;
+        *remaining = 8;
+        *i += 1;
 
-    (current, val)
+        // pull each byte from the array until we're on the last byte with remaining bits
+        while bits_to_pull > 8 {
+            output <<= 8;
+            output += bytes[*i] as u32;
+            bits_to_pull -= 8;
+            *i += 1;
+        }
+    }
+
+    // Handle the remaining bits
+    output <<= bits_to_pull;
+    let mask_start = 8 - *remaining;
+    let mask = create_mask(mask_start, mask_start + bits_to_pull);
+    *remaining -= bits_to_pull;
+
+    let mut value = bytes[*i] & mask;
+    value >>= *remaining;
+
+    output += value as u32;
+    Ok(output)
+}
+
+fn create_mask(start: u8, end: u8) -> u8 {
+    let mut output = 0;
+    for i in 0..8 {
+        output <<= 1;
+        if i >= start && i < end {
+            output += 1;
+        }
+    }
+    output
 }
