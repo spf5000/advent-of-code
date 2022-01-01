@@ -10,8 +10,8 @@ struct Input {
 }
 
 fn parse_input() -> anyhow::Result<Input> {
-    let input_string = parse_data_file("test.txt")?;
-    // let input_string = parse_data_file("20.txt")?;
+    // let input_string = parse_data_file("test.txt")?;
+    let input_string = parse_data_file("20.txt")?;
     let mut input_iter = input_string.lines();
     let algorithm = parse_line(input_iter.next().expect("Expect the first line to be the algorithm"));
     // skip empty line. 
@@ -33,6 +33,8 @@ fn parse_line<S: AsRef<str>>(line: S) -> Vec<bool> {
 }
 
 fn enhance_image(grid: Vec<Vec<bool>>, algorithm: &Vec<bool>, step: u8) -> anyhow::Result<Vec<Vec<bool>>> {
+    // This is only needed because our first algoithm value was a # and the last a . so the outer
+    // edges (of infinity) flip between lit and unlit every evaluation.
     let is_outer_lit = step % 2 != 0;
     // let is_outer_lit = false;
     let mut output = Vec::new();
@@ -88,15 +90,13 @@ fn main() -> anyhow::Result<()> {
 
     let mut part_1 = 0;
     for step in 0..PART_2 {
-        if step <= PART_1 {
-            println!("\nGrid: ");
-            for row in grid.iter() {
-                println!("{}", row.iter().map(|b| if *b {'#'} else {'.'}).collect::<String>());
-            }
-        }
         grid = enhance_image(grid, &input.algorithm, step)?;
         if step + 1 == PART_1 {
             part_1 = get_lit_count(&grid);
+        }
+        println!("\nGrid: ");
+        for row in grid.iter() {
+            println!("{}", row.iter().map(|b| if *b {'#'} else {'.'}).collect::<String>());
         }
     }
 
