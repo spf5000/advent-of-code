@@ -1,14 +1,25 @@
-use std::{collections::{HashMap}, ops::Add, io::BufRead};
-use anyhow::anyhow;
+use crate::parse_data_file;
 
-use advent_of_code::parse_data_file;
+pub struct Day6 {}
+
+impl Default for Day6 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day6 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 const DAYS: u16 = 256;
 
 fn main() -> anyhow::Result<()> {
-    let input_string = parse_data_file("6.txt")?;
+    let data = parse_data_file(super::YEAR, 6)?;
     // let input_string = parse_data_file("test.txt")?;
-    let fishes: Vec<usize> = input_string.split(',').into_iter()
+    let fishes: Vec<usize> = data.split(',').into_iter()
         .map(|num_str| num_str.trim().parse().expect(&format!("Expecting a number from input string! {}", num_str)))
         .collect();
 

@@ -1,6 +1,19 @@
 use std::ops::RangeInclusive;
 use std::collections::HashSet;
 
+pub struct Day17 { }
+
+impl Default for Day17 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day17 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 struct Target {
     x: RangeInclusive<i32>,

@@ -1,11 +1,23 @@
-use advent_of_code::parse_data_file;
+use crate::parse_data_file;
 
-const DAYS: u16 = 256;
+pub struct Day7 {}
+
+impl Default for Day7 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day7 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 fn main() -> anyhow::Result<()> {
     // let input_string = parse_data_file("test.txt")?;
-    let input_string = parse_data_file("7.txt")?;
-    let mut crab_pos: Vec<i32> = input_string.split(',').into_iter()
+    let data = parse_data_file(super::YEAR, 7)?;
+    let mut crab_pos: Vec<i32> = data.split(',').into_iter()
         .map(|num_str| num_str.trim().parse().expect(&format!("Expecting a number from input string! {}", num_str)))
         .collect();
     crab_pos.sort();

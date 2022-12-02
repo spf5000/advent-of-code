@@ -1,4 +1,16 @@
-use std::collections::HashMap;
+pub struct Day21 {}
+
+impl Default for Day21 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day21 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 const PLAYER_1_START: u32 = 2;
 const PLAYER_2_START: u32 = 2;

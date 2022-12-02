@@ -1,12 +1,24 @@
-use std::borrow::{BorrowMut, Borrow};
 use std::rc::Rc;
 use std::cell::RefCell;
 use std::convert::From;
 use anyhow::anyhow;
 use std::fmt;
 
-use advent_of_code::parse_data_file;
+use crate::parse_data_file;
 
+pub struct Day18 { }
+
+impl Default for Day18 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day18 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 fn parse_input(input_string: &String) -> anyhow::Result<Vec<SnailNum>> {
     let mut output = Vec::new();
@@ -84,9 +96,8 @@ impl fmt::Display for SnailNum {
 }
 
 fn main() -> anyhow::Result<()> {
-    let input_string = parse_data_file("18.txt")?;
-    // let input_string = parse_data_file("test.txt")?;
-    let input: Vec<Rc<RefCell<SnailNum>>> = parse_input(&input_string)?.into_iter().map(|snail_num| Rc::new(RefCell::new(snail_num))).collect();
+    let data = parse_data_file(super::YEAR, 18)?;
+    let input: Vec<Rc<RefCell<SnailNum>>> = parse_input(&data)?.into_iter().map(|snail_num| Rc::new(RefCell::new(snail_num))).collect();
 
     let mut input_iter = input.iter();
     let mut output = input_iter.next().expect("Expected the input to have at least one number").clone();
@@ -108,9 +119,9 @@ fn main() -> anyhow::Result<()> {
     for i in 0..input.len() {
         for j in i+1..input.len() {
             // Try both directions.
-            let magnitude = single_sum(&input_string, i, j)?;
+            let magnitude = single_sum(&data, i, j)?;
             if magnitude > max_magnitude { max_magnitude = magnitude }
-            let magnitude = single_sum(&input_string, j, i)?;
+            let magnitude = single_sum(&data, j, i)?;
             if magnitude > max_magnitude { max_magnitude = magnitude }
         }
     }

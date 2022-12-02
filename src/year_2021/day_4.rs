@@ -1,6 +1,19 @@
 use std::collections::HashSet;
+use crate::parse_data_file;
 
-use advent_of_code::parse_data_file;
+pub struct Day4 {}
+
+impl Default for Day4 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day4 {
+    fn get_answer(&self, question: crate::model::Question) -> anyhow::Result<()> {
+        crate::run_question_answers(part1, part2, question)
+    }
+}
 
 // Number of rows/columns in the grid
 const GRID_SIZE: usize = 5;
@@ -43,8 +56,8 @@ impl GridCell {
 
 fn parse_input() -> anyhow::Result<Input> {
     // let input_string = parse_data_file("test.txt")?;
-    let input_string = parse_data_file("4.txt")?;
-    let mut line_iter = input_string.lines().peekable();
+    let data = parse_data_file(super::YEAR, 4)?;
+    let mut line_iter = data.lines().peekable();
 
     // first line is the numbers
     let numbers_str = line_iter.next().expect("Could not get numbers out of the input!");
@@ -126,7 +139,23 @@ fn sum_grid(grid: &Grid) -> u32 {
     output
 }
 
-fn main() -> anyhow::Result<()> {
+fn part1() -> anyhow::Result<()> {
+    let mut input = parse_input()?;
+    for num in input.nums {
+        for mut grid in &mut input.grids {
+            // Round 1: First winner calculated.
+            if call_number_for_grid(num, &mut grid) {
+                let grid_sum = sum_grid(&grid);
+                println!("The Answer: {}", grid_sum * num);
+                return Ok(());
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn part2() -> anyhow::Result<()> {
     let mut input = parse_input()?;
     for num in input.nums {
         for mut grid in &mut input.grids {
@@ -138,11 +167,11 @@ fn main() -> anyhow::Result<()> {
             }
 
             // Round 2: skip if this grid has already won.
-            // if !grid.won && call_number_for_grid(num, &mut grid) {
-            //     grid.won = true;
-            //     let grid_sum = sum_grid(&grid);
-            //     println!("The Answer: {}", grid_sum * num);
-            // }
+            if !grid.won && call_number_for_grid(num, &mut grid) {
+                grid.won = true;
+                let grid_sum = sum_grid(&grid);
+                println!("The Answer: {}", grid_sum * num);
+            }
         }
     }
 

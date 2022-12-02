@@ -1,13 +1,25 @@
-#![feature(map_first_last)]
-
-use advent_of_code::parse_data_file;
 use std::collections::{HashSet, BTreeSet};
+use crate::parse_data_file;
+
+pub struct Day15 { }
+
+impl Default for Day15 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day15 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 fn parse_input() -> anyhow::Result<Vec<Vec<u32>>> {
     // let input_string = parse_data_file("test.txt")?;
-    let input_string = parse_data_file("15.txt")?;
+    let data = parse_data_file(super::YEAR, 15)?;
     let mut output = Vec::new();
-    for line in input_string.lines() {
+    for line in data.lines() {
         let mut line_nums = Vec::new();
         for c in line.chars() {
             line_nums.push(c.to_digit(10).expect(format!("Character is not a digit! {}", c).as_str()));

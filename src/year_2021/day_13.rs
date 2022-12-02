@@ -1,7 +1,21 @@
 use std::{str::FromStr, collections::HashSet};
 
-use advent_of_code::parse_data_file;
+use crate::parse_data_file;
 use anyhow::anyhow;
+
+pub struct Day13 { }
+
+impl Default for Day13 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day13 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 #[derive(Debug, Clone)]
 struct Input {
@@ -35,8 +49,8 @@ struct Fold {
 
 fn parse_input() -> anyhow::Result<Input> {
     // let input_string = parse_data_file("test.txt")?;
-    let input_string = parse_data_file("13.txt")?;
-    let mut lines = input_string.lines();
+    let data = parse_data_file(super::YEAR, 13)?;
+    let mut lines = data.lines();
     let mut coordinates = HashSet::new();
     // parse the coordiantes
     while let Some(line) = lines.next() {

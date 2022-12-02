@@ -1,10 +1,21 @@
-use std::{collections::{HashMap}, ops::Add};
+use std::collections::HashMap;
 use anyhow::anyhow;
 
-use advent_of_code::parse_data_file;
+use crate::parse_data_file;
 
-// Number of rows/columns in the grid
-const GRID_SIZE: usize = 5;
+pub struct Day5 {}
+
+impl Default for Day5 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day5 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 struct Point {
     x: i64,
@@ -18,10 +29,10 @@ impl Point {
 }
 
 fn parse_input() -> anyhow::Result<Vec<(Point, Point)>> {
-    let input_string = parse_data_file("5.txt")?;
+    let data = parse_data_file(super::YEAR, 5)?;
     // let input_string = parse_data_file("test.txt")?;
     let mut output = Vec::new();
-    for line in input_string.lines() {
+    for line in data.lines() {
         let mut split = line.split(" -> ");
         let from = split.next().ok_or(anyhow!("Couldn't find 'from' in line split!: {}", &line))?;
         let to = split.next().ok_or(anyhow!("Couldn't find 'to' in line split!: {}", &line))?;

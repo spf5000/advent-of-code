@@ -1,13 +1,25 @@
-use advent_of_code::parse_data_file;
-
+use crate::parse_data_file;
 use std::collections::HashSet;
-use std::ops::Range;
+
+pub struct Day9 {}
+
+impl Default for Day9 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day9 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 const MAX_VAL: u32 = 10;
 fn parse_input() -> anyhow::Result<Vec<Vec<u32>>> {
-    let input_string = parse_data_file("9.txt")?;
+    let data = parse_data_file(super::YEAR, 9)?;
     let mut output = Vec::new();
-    for line in input_string.lines() {
+    for line in data.lines() {
         let mut line_nums = Vec::new();
         for c in line.chars() {
             line_nums.push(c.to_digit(10).expect(format!("Character is not a digit! {}", c).as_str()));

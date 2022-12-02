@@ -1,6 +1,19 @@
-use advent_of_code::parse_data_file;
+use crate::parse_data_file;
 use anyhow::anyhow;
-use std::iter::Extend;
+
+pub struct Day16 { }
+
+impl Default for Day16 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day16 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 const TYPE_MASK: u32 = 7; // 7 = 00000111
 const LITERAL_GROUP_PREFIX_MASK: u32 = 16; // 7 = 10000
@@ -9,12 +22,12 @@ const HEADER_LEN: u8 = 6;
 
 fn parse_input() -> anyhow::Result<Vec<u8>> {
     // let input_string = parse_data_file("test.txt")?;
-    let input_string = parse_data_file("16.txt")?;
+    let data = parse_data_file(super::YEAR, 16)?;
 
-    Ok((0..input_string.trim().len())
+    Ok((0..data.trim().len())
         .step_by(2)
         .map(|i| {
-            u8::from_str_radix(&input_string[i..=i + 1], 16)
+            u8::from_str_radix(&data[i..=i + 1], 16)
                 .expect("Expected input to include hex string!")
         })
         .collect())

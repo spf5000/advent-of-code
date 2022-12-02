@@ -1,11 +1,24 @@
-use std::cell::{RefCell, RefMut};
+use std::cell::RefCell;
 use std::rc::Rc;
 use std::collections::{HashMap, HashSet};
 use anyhow::anyhow;
 
-use advent_of_code::parse_data_file;
+use crate::parse_data_file;
 
-const DAYS: u16 = 256;
+pub struct Day12 { }
+
+impl Default for Day12 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day12 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
+
 const START: &'static str = "start";
 const END: &'static str = "end";
 
@@ -28,8 +41,8 @@ fn parse_graph<'a>(input_string: &'a str) -> anyhow::Result<Rc<RefCell<Node<'a>>
 
 fn main() -> anyhow::Result<()> {
     // let input_string = parse_data_file("test.txt")?;
-    let input_string = parse_data_file("12.txt")?;
-    let graph = parse_graph(&input_string)?;
+    let data = parse_data_file(super::YEAR, 12)?;
+    let graph = parse_graph(&data)?;
 
     let mut visited = HashSet::new();
     let answer = search(graph, &mut visited, true);

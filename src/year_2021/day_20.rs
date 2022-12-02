@@ -1,5 +1,19 @@
-use advent_of_code::parse_data_file;
+use crate::parse_data_file;
 use anyhow::anyhow;
+
+pub struct Day20 { }
+
+impl Default for Day20 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day20 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 const PART_1: u8 = 2;
 const PART_2: u8 = 50;
@@ -11,8 +25,8 @@ struct Input {
 
 fn parse_input() -> anyhow::Result<Input> {
     // let input_string = parse_data_file("test.txt")?;
-    let input_string = parse_data_file("20.txt")?;
-    let mut input_iter = input_string.lines();
+    let data = parse_data_file(super::YEAR, 20)?;
+    let mut input_iter = data.lines();
     let algorithm = parse_line(input_iter.next().expect("Expect the first line to be the algorithm"));
     // skip empty line. 
     input_iter.next();

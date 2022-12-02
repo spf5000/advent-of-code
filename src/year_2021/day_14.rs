@@ -1,7 +1,21 @@
 use std::collections::{HashMap, BTreeMap};
 
-use advent_of_code::parse_data_file;
+use crate::parse_data_file;
 use anyhow::anyhow;
+
+pub struct Day14 { }
+
+impl Default for Day14 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day14 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
 
 const STEPS: u32 = 40;
 
@@ -33,8 +47,8 @@ fn parse_input<'a>(input_string: &'a String) -> anyhow::Result<Input<'a>> {
 
 fn main() -> anyhow::Result<()> {
     // let input_string = parse_data_file("test.txt")?;
-    let input_string = parse_data_file("14.txt")?;
-    let mut input = parse_input(&input_string)?;
+    let data = parse_data_file(super::YEAR, 14)?;
+    let mut input = parse_input(&data)?;
     let mut char_count_map = BTreeMap::new();
     for step in 0..STEPS {
         let mut next_template = String::new();
@@ -82,6 +96,6 @@ fn main() -> anyhow::Result<()> {
 }
 
 fn update_map(map: &mut BTreeMap<char, u64>, c: char) {
-    let mut count = map.entry(c).or_insert(0);
+    let count = map.entry(c).or_insert(0);
     *count += 1;
 }

@@ -1,16 +1,28 @@
-use advent_of_code::parse_data_file;
+use crate::parse_data_file;
 
 use std::collections::HashSet;
-use std::ops::Range;
 
-const STEPS: u32 = 100;
+pub struct Day11 { }
+
+impl Default for Day11 {
+    fn default() -> Self {
+        Self { }
+    }
+}
+
+impl crate::DayAnswers for Day11 {
+    fn get_answer(&self, _question: crate::model::Question) -> anyhow::Result<()> {
+        main()
+    }
+}
+
 const FLASH_THRESHOLD: u32 = 10;
 
 fn parse_input() -> anyhow::Result<Vec<Vec<u32>>> {
-    let input_string = parse_data_file("11.txt")?;
+    let data = parse_data_file(super::YEAR, 11)?;
     // let input_string = parse_data_file("test.txt")?;
     let mut output = Vec::new();
-    for line in input_string.lines() {
+    for line in data.lines() {
         let mut line_nums = Vec::new();
         for c in line.chars() {
             line_nums.push(c.to_digit(10).expect(format!("Character is not a digit! {}", c).as_str()));
@@ -26,7 +38,6 @@ fn main() -> anyhow::Result<()> {
     let mut flashes = Vec::new();
     let mut flashed = HashSet::new();
     let mut answer = 0;
-    // for step in 0..STEPS {
     for step in 1.. {
         let mut flash_count = 0;
         for i in 0..grid.len() {
