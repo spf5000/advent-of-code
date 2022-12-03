@@ -2,7 +2,7 @@
 // consistent in 2022. also commenting out days that weren't completed, but should exist so this
 // can be re-used this year.
 
-use crate::{YearAnswers, model::Year};
+use crate::model::Year;
 
 mod day_1;
 mod day_2;

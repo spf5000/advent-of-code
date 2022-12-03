@@ -1,4 +1,4 @@
-use crate::{YearAnswers, model::Year};
+use crate::model::Year;
 
 mod day_1;
 mod day_2;
