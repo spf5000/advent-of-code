@@ -9,10 +9,23 @@ use std::path::PathBuf;
 use model::Question;
 
 pub(crate) fn parse_data_file(year: model::Year, day: u8) -> std::io::Result<String> {
+    parse_data_file_helper(year, day, false)
+}
+
+#[cfg(test)]
+pub(crate) fn parse_test_data_file(year: model::Year, day: u8) -> std::io::Result<String> {
+    parse_data_file_helper(year, day, true)
+}
+
+fn parse_data_file_helper(year: model::Year, day: u8, is_test: bool) -> std::io::Result<String> {
     let mut data_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     data_path.push("input");
     data_path.push(year.to_string());
-    data_path.push(day.to_string());
+    if is_test {
+        data_path.push(format!("{}-test", day));
+    } else {
+        data_path.push(day.to_string());
+    }
     data_path.set_extension("txt");
     println!("Reading data from {}", data_path.display());
     std::fs::read_to_string(&data_path)

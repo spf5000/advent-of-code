@@ -15,11 +15,11 @@ impl crate::DayAnswers for DayX {
 }
 
 fn part1() -> anyhow::Result<()> {
-    parse_data_file(super::YEAR, 0)?;
+    parse_data_file(super::YEAR, X)?;
     Ok(())
 }
 
 fn part2() -> anyhow::Result<()> {
-    parse_data_file(super::YEAR, 0)?;
+    parse_data_file(super::YEAR, X)?;
     Ok(())
 }
