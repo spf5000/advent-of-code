@@ -1,4 +1,3 @@
-use std::borrow::Borrow;
 use std::str::FromStr;
 use std::rc::Rc;
 use std::cell::RefCell;
@@ -65,7 +64,7 @@ impl FromStr for Command {
 #[derive(Debug)]
 struct Directory {
     name: String,
-    parent: Option<Rc<RefCell< Directory>>>,
+    parent: Option<Rc<RefCell<Directory>>>,
     children: HashMap<String, File>,
 }
 
@@ -78,13 +77,15 @@ impl Directory {
         }
     }
 
-    fn cd(&mut self, dir: &str) -> anyhow::Result<Rc<RefCell<Directory>>> {
+    fn cd(&self, dir: &str) -> anyhow::Result<Rc<RefCell<Directory>>> {
         if dir == ".." {
-            println!("Going up!");
-            let cloned = self.parent.clone();
-            // println!("Cloned: {:#?}", cloned);
-            return Ok(cloned.ok_or(anyhow!("Trying to go up a directory in a directory with no parent! {:#?}", self))?)
+            return if let Some(parent) = self.parent.clone() {
+                Ok(parent)
+            } else {
+                Err(anyhow!("Trying to go up a directory in a directory with no parent! {:#?}", self))
+            }
         }
+
         match self.children.get(dir) {
             Some(File::Directory(output)) => Ok(output.clone()),
             Some(File::File(_)) => bail!("Trying to change to a non-directory file {}!", dir),
@@ -95,6 +96,17 @@ impl Directory {
     fn add_file(&mut self, file: File) -> anyhow::Result<()> {
         self.children.insert(file.get_name(), file);
         Ok(())
+    }
+
+    fn get_size(&self) -> anyhow::Result<u32> {
+        let mut output = 0;
+        for file in self.children.values() {
+            output += match file {
+                File::Directory(dir) => dir.borrow().get_size()?,
+                File::File(file) => file.size
+            }
+        }
+        Ok(output)
     }
 }
 
@@ -107,8 +119,15 @@ enum File {
 impl File {
     fn get_name(&self) -> String {
         match self {
-            Self::Directory(d) => d.as_ref().borrow().name.clone(),
+            Self::Directory(d) => d.borrow().name.clone(),
             Self::File(f) => f.name.clone()
+        }
+    }
+
+    fn get_size(&self) -> anyhow::Result<u32> {
+        match &self {
+            File::File(file) => Ok(file.size),
+            File::Directory(dir) => dir.borrow().get_size()
         }
     }
 }
@@ -132,12 +151,43 @@ impl FromStr for PlainFile {
 
 fn part1() -> anyhow::Result<()> {
     let input = parse_data_file(super::YEAR, 7)?;
-    traverse_fs(input)?;
+    let root = traverse_fs(input)?;
+    let dirs = traverse_for_dirs(&File::Directory(root))?;
+    // NOTE: There is definitely more clever ways of solving this. Should probably capture the
+    // childer in a flatter manner and just get the size as we traverse instead of traversing the
+    // FS after creating it with the initial traversal.
+    let mut output = 0;
+    for dir in dirs {
+        let dir_size = dir.borrow().get_size()?;
+        if dir_size <= 100000 {
+            output += dir_size
+        }
+    }
+
+    println!("Part 1 Answer is {}", output);
+
     Ok(())
 }
 
 fn part2() -> anyhow::Result<()> {
-    parse_data_file(super::YEAR, 7)?;
+    let input = parse_data_file(super::YEAR, 7)?;
+    let root = traverse_fs(input)?;
+    let space_needed = 30000000 - (70000000 - root.borrow().get_size()?);
+    let dirs = traverse_for_dirs(&File::Directory(root))?;
+
+    // get the amount of space needed to be freed.
+    let mut output = 70000000;
+
+    for dir in dirs {
+        let dir_size = dir.borrow().get_size()?;
+        if dir_size >= space_needed && dir_size < output {
+            println!("Updating the deleted dir to {}", dir.borrow().name);
+            output = dir_size
+        }
+    }
+
+    println!("Part 2 Answer is {}", output);
+
     Ok(())
 }
 
@@ -145,10 +195,25 @@ fn parse_input(input: String) -> anyhow::Result<Vec<Line>> {
     input.lines().map(Line::from_str).collect()
 }
 
+fn traverse_for_dirs(current: &File) -> anyhow::Result<Vec<Rc<RefCell<Directory>>>> {
+    let output = match current {
+        File::File(_) => Vec::new(),
+        File::Directory(dir) => {
+            let mut output = vec![dir.clone()];
+            for file in dir.borrow().children.values() {
+                output.extend(traverse_for_dirs(file)?);
+            }
+            output
+        }
+    };
+
+    Ok(output)
+}
+
 fn traverse_fs(input: String) -> anyhow::Result<Rc<RefCell<Directory>>> {
     let input = parse_input(input)?;
-    let output = Rc::new(RefCell::new(Directory::new("/".to_string(), None)));
-    let mut current = output.clone();
+    let root = Rc::new(RefCell::new(Directory::new("/".to_string(), None)));
+    let mut current = root.clone();
 
     let mut lines = input.into_iter().peekable();
 
@@ -159,44 +224,33 @@ fn traverse_fs(input: String) -> anyhow::Result<Rc<RefCell<Directory>>> {
     }
     
     while let Some(line) = lines.next() {
-        println!("Acting on line {:#?}", line);
-        // println!("Current: {:#?}", current);
         match line {
             Line::Command(Command::CD { dir }) => {
-                println!("Changing directory to {}", dir);
-                let new_dir = current.borrow_mut().cd(&dir)?;
-                println!("updating current");
+                let new_dir = current.borrow().cd(&dir)?;
                 current = new_dir;
-                println!("current updated");
             },
             Line::Command(Command::LS) => {
-                println!("Handling LS");
                 while let Some(Line::Output(_)) = lines.peek() {
                     if let Some(Line::Output(file_deets)) = lines.next() {
-                        println!("File deetz: {}", file_deets);
-                        // directory output;
                         if file_deets.trim().starts_with("dir ") {
                             let mut split = file_deets.trim().split_whitespace();
                             split.next().unwrap();
                             let child_name = split.next().ok_or(anyhow!("Directory ls output didn't include a directory name! {}", file_deets))?;
                             let child = Directory::new(child_name.to_string(), Some(current.clone()));
-                            println!("Child! {:#?}", child);
                             current.borrow_mut().add_file(File::Directory(Rc::new(RefCell::new(child))))?;
                         } else {
                             current.borrow_mut().add_file(File::File(PlainFile::from_str(&file_deets)?))?;
                         }
-
                     } else {
                         unreachable!("Verified with the peek beforehand!")
                     }
                 }
-                // println!("LS complete! {:#?}", current)
             },
             Line::Output(_) => bail!("Found an output line when it should have been handled in the LS command arm! {:#?}", line)
         }
     }
 
-    Ok(output)
+    Ok(root)
 }
 
 

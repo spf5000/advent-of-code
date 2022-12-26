@@ -1043,4 +1043,3 @@ $ cd ..
 $ cd sdhqp
 $ ls
 95362 wsbpzmbq.hws
-
